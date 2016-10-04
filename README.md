@@ -8,5 +8,4 @@ Adds the following functionalities (non-exhaustive):\
 
 How to use:
 Have python3 installed in your computer
-
 Run main.py
