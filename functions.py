@@ -1,21 +1,15 @@
 #!/usr/bin/python3
 """Defines the functions for use in Twitch Launcher using object-oriented programming"""
 
-########### Colocar autenticador
-########### 
-###########
-
-
-
-
-import subprocess, shelve
+import subprocess, shelve, requests
 
 class Db:
     
-    def __init__(self, name, oauth):
+    def __init__(self, name, oauth_rnd, oauth_ls):
         self.dict = {}
         self.name = name
-        self.oauth = oauth
+        self.oauth_rnd = oauth_rnd
+        self.oauth_ls = oauth_ls
         self.shelf = str(self.name+"_settings.shlf")
         try: 
             f = open(name, 'r')
@@ -43,9 +37,9 @@ class Db:
             
         shelf = shelve.open(self.shelf)
         if shelf["chat"]:
-            subprocess.Popen(r"channel="+stream+r" ; quality="+quality+r"; chromium-browser --app=https://www.twitch.tv/$channel/chat?popout= ; livestreamer --twitch-oauth-token "+self.oauth+r" https://www.twitch.tv/$channel $quality", shell=True)
+            subprocess.Popen(r"channel="+stream+r" ; quality="+quality+r"; chromium-browser --app=https://www.twitch.tv/$channel/chat?popout= ; livestreamer --twitch-oauth-token "+self.oauth_ls+r" https://www.twitch.tv/$channel $quality", shell=True)
         else:
-            subprocess.Popen(r"channel="+stream+r" ; quality="+quality+r"; livestreamer --twitch-oauth-token "+self.oauth+r" https://www.twitch.tv/$channel $quality", shell=True)
+            subprocess.Popen(r"channel="+stream+r" ; quality="+quality+r"; livestreamer --twitch-oauth-token "+self.oauth_ls+r" https://www.twitch.tv/$channel $quality", shell=True)
         shelf.close()
 
 
@@ -104,6 +98,8 @@ class Db:
                         "quit   : quits the program \n",
 						"default: defaults to the selected user next time you launch the application \n",
 						"oauth	: changes the current user 'oauth' authentication \n",
+                        "live   : displays live followed streams \n",
+                        "show oauth : displays user's oauth tokens \n",
                         )
 
     def chat_settings(self):
@@ -124,13 +120,21 @@ class Db:
             else:
                 print("Please select a valid option")
 
+    def open_chat(self, chat):
+        """Opens chat for specified channel"""
+        pass
+
     def default(self):
         """Sets the current user to default"""
         shelf = shelve.open("default.shlf", writeback=True)
         shelf["default"] = self.name
         print("Default user changed successfully")
 
-    def oauth_token(self):
+###############
+######## API ##
+###############
+
+# BROKEN corrigir    def oauth_token(self):
         """Changes the current user oauth authentication"""
         shelf = shelve.open('default.shlf', writeback=True)
         self.newoauth = input("Please type the new OAUTH token: ")
@@ -140,6 +144,36 @@ class Db:
         else: 
             print("Nothing was changed")
         shelf.close()
+
+    def show_oauth(self):
+        """Shows the current user oauth tokens"""
+        shelf = shelve.open('default.shlf', writeback=True)
+        print("rnd_launcher token = "+shelf["oauth_rnd"])
+        print("livestreamer token = "+shelf["oauth_ls"])
+        shelf.close()
+
+    def live(self):
+        """Displays online followed channels"""
+        games = []
+        streams = []
+        fl = requests.get("https://api.twitch.tv/kraken/streams/followed?oauth_token="+self.oauth_rnd)
+        for i in range(len(fl.json()['streams'])):
+            if fl.json()['streams'][i]['game'] not in games:
+                games.append(fl.json()['streams'][i]['game'])
+            streams.append((fl.json()['streams'][i]['channel']['name'], fl.json()['streams'][i]['channel']['status'], fl.json()['streams'][i]['game']))
+        games.sort()
+        print("{0:*^60}".format(""))
+        print("{0:*^60}".format("LIST OF ONLINE STREAMS"))
+        print("{0:*^60}".format(""))
+        for i in range(len(games)):
+            print("\n{0}{1}".format("*"*10, games[i]))
+            for c in range(len(streams)):
+                if streams[c][2] == games[i]:
+                    print(streams[c][0], ":", streams[c][1])
+
+#        for i in range(len(fl.json()['streams'])):               
+#                print("{0:<10} | game: {1}\n{2}".format(fl.json()['streams'][i]['channel']['name'], fl.json()['streams'][i]['game'], fl.json()['streams'][i]['channel']['status']))
+      
 
 ##############
 #############		Tests
