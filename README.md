@@ -5,6 +5,7 @@ Adds the following functionalities (non-exhaustive):\
 * Multi-user configurations
 * Chat
 * Database with viewed streams and counts
+* Live streams feed
 
 How to use:
 * Have python3 installed in your computer
