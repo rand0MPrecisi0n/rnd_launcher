@@ -10,5 +10,5 @@ Adds the following functionalities (non-exhaustive):\
 * Windows/Linux compatible
 
 How to use:
-* Have python3 installed in your computer
+* Have python3, livestream and VLC installed in your computer
 * Run main.py
