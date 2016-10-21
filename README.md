@@ -7,6 +7,7 @@ Adds the following functionalities (non-exhaustive):\
 * Database with viewed streams and counts
 * Live streams feed
 * Follow and unfollow
+* Windows/Linux compatible
 
 How to use:
 * Have python3 installed in your computer
