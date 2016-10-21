@@ -6,6 +6,7 @@ Adds the following functionalities (non-exhaustive):\
 * Chat
 * Database with viewed streams and counts
 * Live streams feed
+* Follow and unfollow
 
 How to use:
 * Have python3 installed in your computer
