@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 """Defines the functions for use in Twitch Launcher using object-oriented programming"""
 
+#colocar o display_name na shelf
+
 import subprocess, shelve, requests
+from os import name
 
 class Db:
     
@@ -11,21 +14,39 @@ class Db:
         self.oauth_rnd = oauth_rnd
         self.oauth_ls = oauth_ls
         self.shelf = str(self.name+"_settings.shlf")
+        self.sup_browsers = ("chrome", "chromium-browser", "firefox", "iexplore")
+        self.os = os.name
         try: 
             f = open(name, 'r')
             for line in f.readlines():
-                self.dict[line.split()[0]] = int(line.split()[1])
+                try:
+                    self.dict[line.split()[0]] = int(line.split()[1])
+                except IndexError:
+                    continue
             f.close()
         except FileNotFoundError:
             f = open(name, 'w')
             f.close()
         shelf = shelve.open(self.shelf, writeback=True)
         try:
+            shelf["display_name"]
+        except KeyError:
+            fl = requests.get("https://api.twitch.tv/kraken/user?oauth_token="+self.oauth_rnd)
+            shelf["display_name"] = fl.json()['display_name']
+        try:
             shelf["chat"]
-            shelf.close()
         except KeyError:
             shelf["chat"] = True
-            shelf.close()
+        try:
+            shelf["browser"]
+        except KeyError:
+            while True:
+                browser = input("Please enter your preferred browser (chrome, chromium-browser, firefox, iexplore): ")
+                if browser == 'chrome' or 'chromium-browser' or 'firefox' or 'iexplore':
+                    shelf["browser"] = browser
+                    break
+                else:
+                    print("Entered browser is not supported")
         
     def launcher(self, stream, quality):
         """Launches the stream on livestreamer"""
@@ -36,10 +57,21 @@ class Db:
             print("*"*38)
             
         shelf = shelve.open(self.shelf)
-        if shelf["chat"]:
-            subprocess.Popen(r"channel="+stream+r" ; quality="+quality+r"; chromium-browser --app=https://www.twitch.tv/$channel/chat?popout= ; livestreamer --twitch-oauth-token "+self.oauth_ls+r" https://www.twitch.tv/$channel $quality", shell=True)
+        if self.os == 'nt':  
+            if shelf["chat"]:
+                if shelf["browser"] in self.sup_browsers[:2]:
+                    os.system("start "+shelf["browser"]+" --app=https://www.twitch.tv/"+stream+"/chat?popout=")
+                else:
+                    os.system("start "+shelf["browser"]+" https://www.twitch.tv/"+stream+"/chat?popout=")
+            os.system("livestreamer --twitch-oauth-token "+self.oauth_ls+r" https://www.twitch.tv/"+stream+" "+quality)
+
         else:
-            subprocess.Popen(r"channel="+stream+r" ; quality="+quality+r"; livestreamer --twitch-oauth-token "+self.oauth_ls+r" https://www.twitch.tv/$channel $quality", shell=True)
+            if shelf["chat"]:
+                if shelf["browser"] in self.sup_browsers[:2]:
+                    subprocess.Popen(r"channel="+stream+r" ; quality="+quality+r"; "+shelf["browser"]+r" --app=https://www.twitch.tv/$channel/chat?popout=", shell=True)
+                else:
+                    subprocess.Popen(r"channel="+stream+r" ; quality="+quality+r"; "+shelf["browser"]+r" https://www.twitch.tv/$channel/chat?popout=", shell=True)
+            subprocess.Popen("livestreamer --twitch-oauth-token "+self.oauth_ls+r" https://www.twitch.tv/"+stream+" "+quality, shell=True)
         shelf.close()
 
 
@@ -90,16 +122,19 @@ class Db:
 #        print("{0}\n{1}\n{2}\n{3}\n{4}\n: ".format
         print(
                         "Available commands: \n", 
-                        "list   : displays a list of all accessed streams \n", 
-                        "h/help : displays this help \n", 
-                        "clear  : clears the stream database \n", 
-                        "back   : goes back from quality selection to stream selection \n", 
-                        "chat   : turns chat on/off \n",
-                        "quit   : quits the program \n",
-						"default: defaults to the selected user next time you launch the application \n",
-						"oauth	: changes the current user 'oauth' authentication \n",
-                        "live   : displays live followed streams \n",
-                        "show oauth : displays user's oauth tokens \n",
+                        "list       : displays a list of all accessed streams \n", 
+                        "h/help     : displays this help \n", 
+                        "clear      : clears the stream database \n", 
+                        "back       : goes back from quality selection to stream selection \n", 
+                        "chat       : turns chat on/off \n",
+                        "quit       : quits the program \n",
+						"default    : makes the current user default \n",
+                        "live       : displays live followed streams \n",
+                        "fl stream  : follows given stream \n",
+                        "unf stream : unfollows given stream \n",
+                        "browser    : displays/changes currently selected browser \n",
+						"oauth	    : changes the current user 'oauth' authentication \n",
+                        "show oauth : displays user's oauth tokens \n"
                         )
 
     def chat_settings(self):
@@ -124,6 +159,21 @@ class Db:
         """Opens chat for specified channel"""
         pass
 
+    def browser_settings(self):
+        """Changes the default browser"""
+        shelf = shelve.open(self.shelf, writeback=True)
+        print("The default browser is "+shelf["browser"])
+        while True:
+            browser = input("Please enter the new browser of choice, or enter to skip (chrome, chromium-browser, iexplore or firefox): ")
+            if browser in self.sup_browsers:
+                shelf["browser"] = browser
+                break
+            elif bool(browser) == False:
+                break
+            else:
+                print("Selected browser is unsupported")
+        shelf.close()
+
     def default(self):
         """Sets the current user to default"""
         shelf = shelve.open("default.shlf", writeback=True)
@@ -135,15 +185,15 @@ class Db:
 ###############
 
 # BROKEN corrigir    def oauth_token(self):
-        """Changes the current user oauth authentication"""
-        shelf = shelve.open('default.shlf', writeback=True)
-        self.newoauth = input("Please type the new OAUTH token: ")
-        if self.newoauth:
-            shelf["oauth"] = self.newoauth
-            print("OAUTH changed successfully")
-        else: 
-            print("Nothing was changed")
-        shelf.close()
+        #"""Changes the current user oauth authentication"""
+        #shelf = shelve.open('default.shlf', writeback=True)
+        #self.newoauth = input("Please type the new OAUTH token: ")
+        #if self.newoauth:
+        #    shelf["oauth"] = self.newoauth
+        #    print("OAUTH changed successfully")
+        #else: 
+        #    print("Nothing was changed")
+        #shelf.close()
 
     def show_oauth(self):
         """Shows the current user oauth tokens"""
@@ -157,23 +207,53 @@ class Db:
         games = []
         streams = []
         fl = requests.get("https://api.twitch.tv/kraken/streams/followed?oauth_token="+self.oauth_rnd)
-        for i in range(len(fl.json()['streams'])):
-            if fl.json()['streams'][i]['game'] not in games:
-                games.append(fl.json()['streams'][i]['game'])
-            streams.append((fl.json()['streams'][i]['channel']['name'], fl.json()['streams'][i]['channel']['status'], fl.json()['streams'][i]['game']))
-        games.sort()
-        print("{0:*^60}".format(""))
-        print("{0:*^60}".format("LIST OF ONLINE STREAMS"))
-        print("{0:*^60}".format(""))
-        for i in range(len(games)):
-            print("\n{0}{1}".format("*"*10, games[i]))
-            for c in range(len(streams)):
-                if streams[c][2] == games[i]:
-                    print(streams[c][0], ":", streams[c][1])
+        if self.os == 'nt': #Windows implementation (utf-8 encoding)
+            for i in range(len(fl.json()['streams'])):
+                if fl.json()['streams'][i]['game'] not in games:
+                    games.append(fl.json()['streams'][i]['game'])
+                streams.append((fl.json()['streams'][i]['channel']['name'], fl.json()['streams'][i]['channel']['status'].encode('utf-8'), fl.json()['streams'][i]['game']))
+            games.sort()
+            print("\n{0:*^60}".format(""))
+            print("{0:*^60}".format("LIST OF ONLINE STREAMS"))
+            ("{0:*^60}".format(""))
+            for i in range(len(games)):
+                print(u"\n{0}{1}".format("*"*10, games[i]))
+                for c in range(len(streams)):
+                    if streams[c][2] == games[i]:
+                        print(streams[c][0], ":", streams[c][1])
+            print("\n")
 
+        else: #Linux implementation (no encoding)
+            for i in range(len(fl.json()['streams'])):
+                if fl.json()['streams'][i]['game'] not in games:
+                    games.append(fl.json()['streams'][i]['game'])
+                streams.append((fl.json()['streams'][i]['channel']['name'], fl.json()['streams'][i]['channel']['status'], fl.json()['streams'][i]['game']))
+            games.sort()
+            print("\n{0:*^60}".format(""))
+            print("{0:*^60}".format("LIST OF ONLINE STREAMS"))
+            ("{0:*^60}".format(""))
+            for i in range(len(games)):
+                print(u"\n{0}{1}".format("*"*10, games[i]))
+                for c in range(len(streams)):
+                    if streams[c][2] == games[i]:
+                        print(streams[c][0], ":", streams[c][1])
+            print("\n")
 #        for i in range(len(fl.json()['streams'])):               
 #                print("{0:<10} | game: {1}\n{2}".format(fl.json()['streams'][i]['channel']['name'], fl.json()['streams'][i]['game'], fl.json()['streams'][i]['channel']['status']))
       
+    def follow(self, stream):
+        """Follows given stream"""
+        shelf = shelve.open(self.shelf, writeback=True)
+        fl  = requests.put(r"https://api.twitch.tv/kraken/users/"+shelf["display_name"]+r"/follows/channels/"+stream+"?oauth_token="+self.oauth_rnd)
+        print("Channel "+stream+" followed successfully")
+        shelf.close()
+
+    def unfollow(self, stream):
+        """Follows given stream"""
+        shelf = shelve.open(self.shelf, writeback=True)
+        fl  = requests.delete(r"https://api.twitch.tv/kraken/users/"+shelf["display_name"]+r"/follows/channels/"+stream+"?oauth_token="+self.oauth_rnd)
+        print("Channel "+stream+" unfollowed successfully")
+        shelf.close()
 
 ##############
 #############		Tests
